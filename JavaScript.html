@@ -1,0 +1,219 @@
+// Selectors
+const todoInput = document.querySelector('.todo-input');
+const todoButton = document.querySelector('.todo-button');
+const todoList = document.querySelector('.todo-list');
+const filterOption = document.querySelector('.filter-todo');
+const emptyButton = document.querySelector('.empty-button');
+
+// Event Listeners
+todoButton.addEventListener('click', addTodo);
+todoList.addEventListener('click',deleteCheck);
+filterOption.addEventListener('click',filterTodo);
+document.addEventListener("DOMContentLoaded", getTodos);
+emptyButton.addEventListener('click', emptyTodos);
+
+// Functions
+function addTodo(event) {
+  // Prevents the form from submitting
+  event.preventDefault();                                             
+  
+  // Pulls the value from the input field and trims the whitespace
+  const todoValue = todoInput.value.trim();
+
+  if (todoValue) {
+    // Creates a todoDiv and assigns it the class todo
+    const todoDiv = document.createElement("div");                      
+    todoDiv.classList.add("todo");                                      
+    
+    // Creates a newTodo line, assigns it the text from the text field todoInput, assigns it the class todo-item, and appends the newTodo line to the todoDiv
+    const newTodoLi = document.createElement("li");                       
+    newTodoLi.innerText = todoInput.value;                                  
+    newTodoLi.classList.add('todo-item');                                
+    todoDiv.appendChild(newTodoLi);                                    
+
+    // Stores the todo item to a local storage with the completed status set as false  
+    saveLocalTodos(todoInput.value, false);                               
+
+    // Creates a completed button
+    const completedButton = document.createElement('button');           
+    completedButton.innerHTML = '<i class="fas fa-check"></i>';
+    completedButton.classList.add("complete-btn");
+    todoDiv.appendChild(completedButton);
+    
+    // Creates a trash button
+    const trashButton = document.createElement('button');               
+    trashButton.innerHTML = '<i class="fas fa-trash"></i>';
+    trashButton.classList.add("trash-btn");
+    todoDiv.appendChild(trashButton);
+
+    // Appends the todoDiv to the todoList
+    todoList.appendChild(todoDiv);                                      
+
+    // Clears the todoInput text field and resets the placeholder
+    todoInput.value = "";
+    todoInput.placeholder = "Task description";
+  } else {
+    // Set placeholder text if the input is empty
+    todoInput.setAttribute('placeholder', 'No input!');
+  }                                              
+}
+
+// Deletes the parent element of the trash icon the user clicked on
+function deleteCheck(e) {                                             
+  const item = e.target;
+
+  if (item.classList[0] === "trash-btn") {
+    const todo = item.parentElement;
+    todo.classList.add("fall");
+    removeLocalTodos(todo);
+    // Waits until the transition ends and removes the element afterwards
+    todo.addEventListener('transitionend', function(){                
+        todo.remove();
+      })
+  }
+
+  // Applies the class completed if the complete-btn was clicked
+  if (item.classList[0] === "complete-btn") {                                       
+    // Retrieves the div element of the clicked button
+    const todoDiv = item.parentElement;
+    // Retrieves the first child of the parent div which is a line element 
+    const todoLi = todoDiv.firstElementChild;
+    // Adds the class "completed" to the line element
+    todoLi.classList.add("completed");
+
+    console.log(`Todo Item: `);
+    console.log(`  Tag: ${todoLi.tagName}`);
+    console.log(`  Classes: ${Array.from(todoLi.classList).join(', ')}`);
+
+    // Updates the completed value of the clicked todo item to true in the local storage    
+    updateLocalTodos(todoDiv);                                           
+  }    
+}
+
+// Filters the list of displayed todo items based on their completeness
+function filterTodo(e) {
+  const todos = todoList.childNodes || [];
+  console.log(todos.length);  
+
+  todos.forEach(function(todo) {
+    console.log(`Todo Item: `);
+    console.log(`Tag: ${todo.tagName}`);
+    console.log(`Classes: ${Array.from(todo.classList).join(', ')}`);
+    
+    switch(e.target.value) {
+      case "all":
+        todo.style.display = "flex";
+        break;
+      case "completed":
+        todo.children[0].classList.contains("completed") ? todo.style.display = "flex" : todo.style.display = "none";
+        break;
+      case "uncompleted":
+        !todo.children[0].classList.contains("completed") ? todo.style.display = "flex" : todo.style.display = "none";
+        break;
+    }
+  });
+}  
+
+function checkLocalStorage() {
+  let todos;
+  
+  // Checks if there is no existing local storage items named todos
+  if (localStorage.getItem('todos') === null) {                       
+    // Creates an empty array if there are none
+    todos = [];                                                     
+  }
+  else {
+    // If there is, it pulls the existing array 
+    todos = JSON.parse(localStorage.getItem('todos'));                         
+  }
+
+  return todos;
+}
+
+function saveLocalTodos(text, completed) {
+  let todos = checkLocalStorage();
+
+  // Pushes an object containing the text and the completion status
+  todos.push({ text: text, completed: completed });
+  // Stores to the local storage                           
+  localStorage.setItem("todos", JSON.stringify(todos));               
+}
+
+function getTodos() {
+  let todos = checkLocalStorage();
+  
+  todos.forEach(function(todo){
+    // Creates a todoDiv and assigns it the class todo
+    const todoDiv = document.createElement("div");
+    todoDiv.classList.add("todo");
+    
+    // Creates a newTodo line, assigns it the text from the text field todoInput, assigns it the class todo-item, and appends the newTodo line to the todoDiv   
+    const newTodoLi = document.createElement("li");                     
+    newTodoLi.innerText = todo.text;                                    
+    newTodoLi.classList.add('todo-item');                               
+    todoDiv.appendChild(newTodoLi);                                     
+
+    // Creates a completed button
+    const completedButton = document.createElement('button');         
+    completedButton.innerHTML = '<i class="fas fa-check"></i>';
+    completedButton.classList.add("complete-btn");
+    todoDiv.appendChild(completedButton);
+    
+    // Creates a trash button
+    const trashButton = document.createElement('button');             
+    trashButton.innerHTML = '<i class="fas fa-trash"></i>';
+    trashButton.classList.add("trash-btn");
+    todoDiv.appendChild(trashButton);
+
+    if (todo.completed) {
+      newTodoLi.classList.add("completed");
+    }
+
+    // Appends the todoDiv to the todoList
+    todoList.appendChild(todoDiv);                                    
+  });
+}
+
+function updateLocalTodos(todo) {
+  let todos = checkLocalStorage();
+  
+  // Finds the index of the item that contains the text of the clicked todo item 
+  const todoIndex = todos.findIndex((item) => item.text === todo.children[0].innerText);
+  if (todoIndex !== -1) {
+    // Update the completed property to true
+    todos[todoIndex].completed = true;                                
+    localStorage.setItem("todos", JSON.stringify(todos));
+  }
+}
+
+function removeLocalTodos(todo) {
+  let todos = checkLocalStorage();
+  
+  // Finds the index of the item that contains the text of the clicked todo item 
+  const todoIndex = todos.findIndex((item) => item.text === todo.children[0].innerText);
+  if (todoIndex !== -1) {
+    todos.splice(todoIndex, 1);
+    localStorage.setItem("todos", JSON.stringify(todos));
+  }
+}
+
+function emptyTodos() {
+  event.preventDefault();
+
+  // Get all the todo items from the DOM  
+  const todos = Array.from(todoList.children);                        
+
+  // Remove each todo item from the DOM and local storage
+  todos.forEach((todo) => {
+    if (todo) {
+      todo.classList.add("fall");
+      removeLocalTodos(todo);
+      todo.addEventListener('transitionend', function() {
+        todo.remove();
+      });
+    }
+  });
+  
+  // Clear the local storage
+  localStorage.clear();                                      
+}
